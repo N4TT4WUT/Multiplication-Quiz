@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Multiplication Quiz</title>
+    <style>
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            font-family: Arial, sans-serif;
+            background-color: #f0f0f0;
+        }
+        #quiz-container {
+            text-align: center;
+            padding: 20px;
+            background-color: #ffffff;
+            border: 1px solid #cccccc;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+        #question {
+            font-size: 2em;
+            margin-bottom: 20px;
+        }
+        #answer {
+            font-size: 2em;
+            color: #ff0000;
+            visibility: hidden;
+        }
+        #timer {
+            font-size: 1.5em;
+            margin-bottom: 20px;
+        }
+        #controls {
+            margin-top: 20px;
+        }
+        #control-panel {
+            margin-top: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .control {
+            margin: 10px;
+        }
+        button {
+            padding: 10px 20px;
+            font-size: 1em;
+            margin: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div id="quiz-container">
+        <div id="question">Press Start to begin</div>
+        <div id="timer" style="display: none;">Time remaining: 20 seconds</div>
+        <div id="answer"></div>
+        <div id="controls">
+            <button id="start-btn">Start</button>
+            <button id="stop-btn" disabled>Stop</button>
+            <button id="toggle-timer-btn">Hide Timer</button>
+        </div>
+        <div id="control-panel">
+            <div class="control">
+                <label for="reveal-time">Time to reveal answer (seconds):</label>
+                <input type="number" id="reveal-time" value="20" min="1">
+            </div>
+            <div class="control">
+                <label for="next-question-time">Time to next question (seconds):</label>
+                <input type="number" id="next-question-time" value="10" min="1">
+            </div>
+            <button id="update-settings-btn">Update Settings</button>
+        </div>
+    </div>
+
+    <audio id="reveal-sound" src="reveal.wav"></audio>
+    <audio id="next-sound" src="next.wav"></audio>
+
+    <script>
+        let num1, num2;
+        let questionTimeout, answerTimeout, timerInterval;
+        let quizRunning = false;
+        let timerVisible = true;
+        let remainingTime;
+        let revealTime = 20;
+        let nextQuestionTime = 10;
+        const startBtn = document.getElementById('start-btn');
+        const stopBtn = document.getElementById('stop-btn');
+        const toggleTimerBtn = document.getElementById('toggle-timer-btn');
+        const updateSettingsBtn = document.getElementById('update-settings-btn');
+        const revealTimeInput = document.getElementById('reveal-time');
+        const nextQuestionTimeInput = document.getElementById('next-question-time');
+        const revealSound = document.getElementById('reveal-sound');
+        const nextSound = document.getElementById('next-sound');
+
+        function getRandomTwoDigitNumber() {
+            return Math.floor(Math.random() * 90) + 10;
+        }
+
+        function updateTimer() {
+            const timerElement = document.getElementById('timer');
+            timerElement.textContent = `Time remaining: ${remainingTime} seconds`;
+            if (remainingTime > 0) {
+                remainingTime--;
+            } else {
+                clearInterval(timerInterval);
+                if (quizRunning && document.getElementById('answer').style.visibility === 'hidden') {
+                    showAnswer();
+                }
+            }
+        }
+
+        function displayQuestion() {
+            num1 = getRandomTwoDigitNumber();
+            num2 = getRandomTwoDigitNumber();
+            const questionElement = document.getElementById('question');
+            const answerElement = document.getElementById('answer');
+            const timerElement = document.getElementById('timer');
+
+            questionElement.textContent = `${num1} x ${num2}`;
+            answerElement.textContent = `Answer: ${num1 * num2}`;
+            answerElement.style.visibility = 'hidden';
+
+            remainingTime = revealTime;
+            timerElement.textContent = `Time remaining: ${remainingTime} seconds`;
+            clearInterval(timerInterval);
+            timerInterval = setInterval(updateTimer, 1000);
+
+            questionTimeout = setTimeout(showAnswer, revealTime * 1000);
+        }
+
+        function showAnswer() {
+            if (quizRunning) {
+                const answerElement = document.getElementById('answer');
+                answerElement.style.visibility = 'visible';
+                revealSound.play();
+                remainingTime = nextQuestionTime;
+                clearInterval(timerInterval);
+                timerInterval = setInterval(updateTimer, 1000);
+                answerTimeout = setTimeout(() => {
+                    nextSound.play();
+                    displayQuestion();
+                }, nextQuestionTime * 1000);
+            }
+        }
+
+        function startQuiz() {
+            quizRunning = true;
+            startBtn.disabled = true;
+            stopBtn.disabled = false;
+            document.getElementById('timer').style.display = 'block';
+            displayQuestion();
+        }
+
+        function stopQuiz() {
+            clearTimeout(questionTimeout);
+            clearTimeout(answerTimeout);
+            clearInterval(timerInterval);
+            quizRunning = false;
+            startBtn.disabled = false;
+            stopBtn.disabled = true;
+            document.getElementById('question').textContent = 'Press Start to begin';
+            document.getElementById('answer').style.visibility = 'hidden';
+            document.getElementById('timer').style.display = 'none';
+        }
+
+        function toggleTimer() {
+            const timerElement = document.getElementById('timer');
+            if (timerVisible) {
+                timerElement.style.display = 'none';
+                toggleTimerBtn.textContent = 'Show Timer';
+            } else {
+                timerElement.style.display = 'block';
+                toggleTimerBtn.textContent = 'Hide Timer';
+            }
+            timerVisible = !timerVisible;
+        }
+
+        function updateSettings() {
+            revealTime = parseInt(revealTimeInput.value, 10);
+            nextQuestionTime = parseInt(nextQuestionTimeInput.value, 10);
+            if (quizRunning) {
+                displayQuestion();
+            }
+        }
+
+        startBtn.addEventListener('click', startQuiz);
+        stopBtn.addEventListener('click', stopQuiz);
+        toggleTimerBtn.addEventListener('click', toggleTimer);
+        updateSettingsBtn.addEventListener('click', updateSettings);
+
+        // Initialization
+        document.getElementById('question').textContent = 'Press Start to begin';
+        document.getElementById('timer').textContent = `Time remaining: ${revealTime} seconds`;
+    </script>
+</body>
+</html>
